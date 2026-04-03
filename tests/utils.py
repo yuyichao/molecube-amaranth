@@ -1,5 +1,9 @@
 #
 
+def get_bits(data, nbits):
+    for bit in range(nbits):
+        yield (data >> (nbits - bit - 1)) & 1
+
 class DDSChecker:
     @staticmethod
     async def idle(sim, port, n=10):
@@ -221,3 +225,46 @@ class DDSChecker:
             assert sim.get(port.fud.o) == 0
             assert sim.get(port.cs.o) == cs
             await sim.tick()
+
+
+class SPIChecker:
+    @staticmethod
+    async def idle(sim, port, n=10):
+        ncs = len(port.cs)
+        csmask = (1 << ncs) - 1
+        for _ in range(n):
+            assert sim.get(port.mosi.o) == 0
+            assert sim.get(port.sclk.o) == 1
+            assert sim.get(port.cs.o) == csmask
+            await sim.tick()
+
+    @staticmethod
+    async def spi(sim, port, *, id, div, nbits, pha, pol, data, result=0):
+        ncs = len(port.cs)
+        csmask = (1 << ncs) - 1
+        bits = list(get_bits(data, nbits))
+        result_bits = list(get_bits(result, nbits))
+        cs = (1 << id)^csmask
+        assert sim.get(port.mosi.o) == bits[0]
+        assert sim.get(port.sclk.o) == pol
+        assert sim.get(port.cs.o) == csmask
+
+        async def check_half_period(d, clk):
+            for _ in range(div):
+                await sim.tick()
+                assert sim.get(port.mosi.o) == d
+                assert sim.get(port.sclk.o) == clk
+                assert sim.get(port.cs.o) == cs
+
+        if pha == 0:
+            for n in range(nbits):
+                sim.set(port.miso.i, result_bits[n])
+                await check_half_period(bits[n], pol)
+                await check_half_period(bits[n], 1 - pol)
+            await check_half_period(0, pol)
+        else:
+            await check_half_period(bits[0], pol)
+            for n in range(nbits):
+                sim.set(port.miso.i, result_bits[n])
+                await check_half_period(bits[n], 1 - pol)
+                await check_half_period(bits[n], pol)
