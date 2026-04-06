@@ -49,6 +49,29 @@ class Registers(Elaboratable):
         self.clockout_div = Signal(self.CLKDIV_WIDTH, init=255)
         self.loopback = Signal(self.REG_WIDTH)
 
+        self.dds_write_adsu = Signal(6, init=1) # Address/Data SetUp cycles - 1
+        self.dds_write_wrlow = Signal(6, init=4) # WRite enable LOW (assert) cycles - 1
+        self.dds_write_adhd = Signal(6, init=1) # Address/Data HolD cycles - 1
+        self.dds_write_fuddl = Signal(6, init=1) # FUD DeLay cycles - 1
+        self.dds_write_fudhd = Signal(6, init=4) # FUD HolD cycle - 1
+        self.dds_timing1 = Cat(self.dds_write_adsu,
+                               self.dds_write_wrlow,
+                               self.dds_write_adhd,
+                               self.dds_write_fuddl,
+                               self.dds_write_fudhd)
+
+
+        self.dds_read_asu = Signal(6, init=22) # Address SetUp cycle - 1
+        self.dds_read_rdl = Signal(6, init=0) # Read re-init DeLay cycle - 1
+        self.dds_read_rdhoz = Signal(6, init=20) # ReaD enable High to Output high-Z cycle - 1
+
+        self.dds_reset_rshd = Signal(6, init=31) # ReSet HolD cycle - 1
+
+        self.dds_timing2 = Cat(self.dds_read_asu,
+                               self.dds_read_rdl,
+                               self.dds_read_rdhoz,
+                               self.dds_reset_rshd)
+
         self.all_counters = dict(
             dbg_inst_word_count=Counter(self.REG_WIDTH),
             dbg_inst_count=Counter(self.REG_WIDTH),
