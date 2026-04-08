@@ -268,3 +268,83 @@ class SPIChecker:
                 sim.set(port.miso.i, result_bits[n])
                 await check_half_period(bits[n], 1 - pol)
                 await check_half_period(bits[n], pol)
+
+
+class InstBuilder:
+    TTL_OP = 0x00000000
+    DDS_OP = 0x10000000
+    Wait_OP = 0x20000000
+    ClearErr_OP = 0x30000000
+    LoopBack_OP = 0x40000000
+    ClockOut_OP = 0x50000000
+    SPI_OP = 0x60000000
+    TimeCheck_Flag = 0x8000000
+
+    @classmethod
+    def pulse(cls, ctrl, op, *, timecheck):
+        if timecheck:
+            ctrl = ctrl | cls.TimeCheck_Flag
+        return (op, ctrl)
+    @classmethod
+    def dds(cls, ctrl, op, *, timecheck):
+        return cls.pulse(ctrl | cls.DDS_OP, op, timecheck=timecheck)
+
+    @classmethod
+    def dds_set_freq(cls, *, id, freq, timecheck=False):
+        return cls.dds(id << 4, freq, timecheck=timecheck)
+
+    @classmethod
+    def dds_set_amp_phase(cls, *, id, amp, phase, timecheck=False):
+        return cls.dds(0x1 | (id << 4), (phase << 16) | amp, timecheck=timecheck)
+
+    @classmethod
+    def dds_set_two_bytes(cls, *, id, addr, data, timecheck=False):
+        return cls.dds(0x2 | (id << 4) | (((addr + 1) & 0x7f) << 9),
+                       data & 0xffff, timecheck=timecheck)
+
+    @classmethod
+    def dds_reset(cls, *, id, timecheck=False):
+        return cls.dds(0x4 | (id << 4), 0, timecheck=timecheck)
+
+    @classmethod
+    def dds_set_four_bytes(cls, *, id, addr, data, timecheck=False):
+        return cls.dds(0xf | (id << 4) | (((addr + 1) & 0x7f) << 9),
+                       data, timecheck=timecheck)
+
+    @classmethod
+    def dds_get_two_bytes(cls, *, id, addr, timecheck=False):
+        return cls.dds(0x3 | (id << 4) | (((addr + 1) & 0x7f) << 9), 0,
+                       timecheck=timecheck)
+
+    @classmethod
+    def dds_get_four_bytes(cls, *, id, addr, timecheck=False):
+        return cls.dds(0xe | (id << 4) | (((addr + 1) & 0x7f) << 9), 0,
+                       timecheck=timecheck)
+
+    @classmethod
+    def ttl(cls, *, ttl, t, bank, timecheck=False):
+        return cls.pulse(cls.TTL_OP | t | (bank << 24), ttl, timecheck=timecheck)
+
+    @classmethod
+    def clockout(cls, *, div, timecheck=False):
+        return cls.pulse(cls.ClockOut_OP, div & 0xff, timecheck=timecheck)
+
+    @classmethod
+    def wait(cls, *, t, trig_chn=-1, trig_raise=True, timecheck=False):
+        trig_data = 0
+        if trig_chn >= 0:
+            trig_data = (trig_chn << 20) | ((1 if trig_raise else 2) << 28)
+        return cls.pulse(cls.Wait_OP | t, trig_data, timecheck=timecheck)
+
+    @classmethod
+    def clear_error(cls):
+        return cls.pulse(cls.ClearErr_OP, 0, timecheck=False)
+
+    @classmethod
+    def loopback(cls, *, data, timecheck=False):
+        return cls.pulse(cls.LoopBack_OP, data, timecheck=timecheck)
+
+    @classmethod
+    def spi(cls, *, id, div, pha, pol, data, save_result, timecheck=False):
+        opcode = (div - 1) | (save_result << 10) | (id << 11) | (pha << 13) | (pol << 14)
+        return cls.pulse(opcode | cls.SPI_OP, data, timecheck=timecheck)
