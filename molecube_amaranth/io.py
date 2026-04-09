@@ -144,6 +144,16 @@ class SPIBuff(Elaboratable):
         return m
 
 class PulseIO(Elaboratable):
+    @classmethod
+    def from_config(cls, plat, config):
+        return cls(ttlin=get_ttlin_ports(plat, config.TTLIN),
+                   ttlout=get_ttlout_ports(plat, config.TTLOUT),
+                   dds0=get_dds_ports(plat, 0),
+                   dds1=get_dds_ports(plat, 1),
+                   clockout=get_clockout_ports(plat, config.CLOCKOUT),
+                   spi=get_spi(plat, miso=config.SPI_MISO, mosi=config.SPI_MOSI,
+                               sclk=config.SPI_SCLK, cs=config.SPI_CS))
+
     def __init__(self, *, ttlin, ttlout, dds0, dds1, clockout, spi):
         self.ttlin_port = ttlin
         self.ttlout_port = ttlout
