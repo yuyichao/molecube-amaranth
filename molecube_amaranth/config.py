@@ -19,3 +19,6 @@ class Config:
     SPI_MOSI: str = ''
     SPI_SCLK: str = ''
     SPI_CS: str = ''
+
+    CLOCK_HZ: float = 200e6
+    CLOCK_SHIFT: int = 1
