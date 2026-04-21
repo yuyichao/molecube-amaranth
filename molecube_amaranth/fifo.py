@@ -170,7 +170,7 @@ class ResultFifo(Elaboratable):
         @def_method(m, self.read)
         def _():
             read_trans = Transaction()
-            with read_trans.body(m, ready=self.read.run):
+            with read_trans.body(m):
                 res = in_adaptor.input(m).DATA
             return Mux(read_trans.run, res, 0)
 
@@ -182,7 +182,7 @@ class ResultFifo(Elaboratable):
 
         @def_method(m, self.write, combiner=combiner, nonexclusive=True)
         def _(data):
-            with Transaction().body(m, ready=self.write.run):
+            with Transaction().body(m):
                 out_adaptor.output(m, data)
 
         return m
