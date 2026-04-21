@@ -1466,6 +1466,10 @@ class TestInstRunner(TestCaseWithSimulator):
         data2 = random.randint(0, 0xffff_ffff)
 
         async def producer(sim):
+            if clock_shift == 0:
+                sim.set(circ.csr.dds_read_asu, 11)
+                sim.set(circ.csr.dds_read_rdl, 7)
+                sim.set(circ.csr.dds_read_rdhoz, 10)
             await circ.write_cmd(sim, *InstBuilder.dds_get_four_bytes(id=id1, addr=addr1))
             await circ.write_cmd(sim, *InstBuilder.dds_get_four_bytes(id=id2, addr=addr2))
 

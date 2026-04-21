@@ -240,15 +240,9 @@ class DDSController(Elaboratable):
                     # Setup address and read enable
                     m.d.sync += [dds_next_data.eq(dds_data_in),
                                  dds_addr.eq(dds_next_addr)]
-                    with m.If(self.csr.dds_read_rdl == 0):
-                        # Skip read enable deassert, go directly to second data
-                        m.d.sync += [fsm_state.eq(FSMState.RD_ASETUP2),
-                                     hold_cnt.eq(self.csr.dds_read_asu),
-                                     dds_rd.eq(1)]
-                    with m.Else():
-                        m.d.sync += [fsm_state.eq(FSMState.RD_DELAY1),
-                                     hold_cnt.eq(self.csr.dds_read_rdl),
-                                     dds_rd.eq(0)]
+                    m.d.sync += [fsm_state.eq(FSMState.RD_DELAY1),
+                                 hold_cnt.eq(self.csr.dds_read_rdl),
+                                 dds_rd.eq(0)]
                 with m.Case(FSMState.RD_DELAY1):
                     m.d.sync += [fsm_state.eq(FSMState.RD_ASETUP2),
                                  hold_cnt.eq(self.csr.dds_read_asu),

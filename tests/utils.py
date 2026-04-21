@@ -196,15 +196,14 @@ class DDSChecker:
             assert sim.get(port.cs.o) == cs
             await sim.tick()
 
-        if rdl != 0:
-            for _ in range(rdl + 1):
-                assert sim.get(port.addr.o) == addr
-                assert sim.get(port.data.oe) == 0
-                assert sim.get(port.data.o) == 0
-                assert sim.get(port.ctrl.o) == 0b011
-                assert sim.get(port.fud.o) == 0
-                assert sim.get(port.cs.o) == cs
-                await sim.tick()
+        for _ in range(rdl + 1):
+            assert sim.get(port.addr.o) == addr
+            assert sim.get(port.data.oe) == 0
+            assert sim.get(port.data.o) == 0
+            assert sim.get(port.ctrl.o) == 0b011
+            assert sim.get(port.fud.o) == 0
+            assert sim.get(port.cs.o) == cs
+            await sim.tick()
 
         sim.set(port.data.i, data & 0xffff)
 

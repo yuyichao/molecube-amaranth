@@ -62,7 +62,7 @@ class Registers(Elaboratable):
 
 
         self.dds_read_asu = Signal(6, init=22) # Address SetUp cycle - 1
-        self.dds_read_rdl = Signal(6, init=0) # Read re-init DeLay cycle - 1
+        self.dds_read_rdl = Signal(6, init=15) # Read re-init DeLay cycle - 1
         self.dds_read_rdhoz = Signal(6, init=20) # ReaD enable High to Output high-Z cycle - 1
 
         self.dds_reset_rshd = Signal(6, init=31) # ReSet HolD cycle - 1
