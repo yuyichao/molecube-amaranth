@@ -9,8 +9,7 @@ readme = "README.md"
 description = "NaCs FPGA experiment control, amaranth port"
 dependencies = [
     "amaranth ~= 0.5.0",
-    # Use git version before a version with the pipeline builder is released
-    "transactron @ git+https://github.com/kuznia-rdzeni/transactron",
+    "transactron ~= 0.6.1",
     "amaranth-axi @ git+https://github.com/yuyichao/amaranth-axi",
     "amaranth-zynq @ git+https://github.com/yuyichao/amaranth-zynq",
 ]
