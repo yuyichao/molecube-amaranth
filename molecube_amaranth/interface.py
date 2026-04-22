@@ -30,7 +30,7 @@ class ControlInterface(wiring.Component):
         m = TModule()
 
         m.submodules.write_iface = write_iface = AXILSlaveWriteIFace(self.axilite,
-                                                                     buffered=True)
+                                                                     buffered=False)
         m.submodules.read_iface = read_iface = AXILSlaveReadIFace(self.axilite,
                                                                   buffered=True)
 
@@ -143,11 +143,11 @@ class ControlInterface(wiring.Component):
                     axi_write_reg(m, Cat(csr_shadow.dds_timing2,
                                          Signal(32 - len(csr_shadow.dds_timing2))),
                                   data, strb)
-            write_iface.done(m)
 
         with Transaction().body(m):
             req = write_iface.get(m)
             start_write(m, idx=req.addr >> 2, data=req.data, strb=req.strb)
+            write_iface.done(m)
 
         m.submodules.read_pipe = read_pipe = PipelineBuilder()
 

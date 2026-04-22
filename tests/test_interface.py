@@ -241,9 +241,11 @@ class TestInterface(TestCaseWithSimulator):
                                                                strb=strb,
                                                                data=data)) is not None
                     vals[idx] = data = update_data(vals[idx], data, strb) & masks[idx]
-                    for _ in range(5):
+                    for _ in range(3):
                         await sim.tick()
                     assert (await iface.write_reply.call_try(sim)) is not None
+                    await sim.tick()
+                    await sim.tick()
                     assert sim.get(reg) == data
 
                     assert (await iface.read_request.call_try(sim, addr=idx * 4)) is not None
@@ -281,6 +283,8 @@ class TestInterface(TestCaseWithSimulator):
                 assert (await iface.write_reply.call_try(sim)) is not None
 
             # Make sure the data is propagated to the target from the shadow
+            await sim.tick()
+            await sim.tick()
             await sim.tick()
             await sim.tick()
 
