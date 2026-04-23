@@ -6,7 +6,7 @@ from amaranth.lib.data import StructLayout
 
 from transactron import TModule, Transaction, Method, def_method
 
-from .utils import assign_xvalue
+from .utils import assign_xvalue, oring_combiner
 
 
 class FSMState(enum.Enum):
@@ -139,7 +139,7 @@ class DDSController(Elaboratable):
         dds_next_addr = Signal(7)
         dds_next_data = Signal(16)
 
-        @def_method(m, self.set, nonexclusive=True)
+        @def_method(m, self.set, combiner=oring_combiner, nonexclusive=True)
         def _(arg):
             m.d.sync += [fsm_state.eq(arg.state),
                          hold_cnt.eq(arg.hold_cnt),

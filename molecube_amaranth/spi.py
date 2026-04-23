@@ -5,7 +5,7 @@ from amaranth.lib.data import StructLayout
 
 from transactron import TModule, Transaction, Method, def_method
 
-from .utils import assign_xvalue
+from .utils import assign_xvalue, oring_combiner
 
 class SPIController(Elaboratable):
     def __init__(self, spiio, result_fifo, *, div_width=9):
@@ -50,7 +50,7 @@ class SPIController(Elaboratable):
                          spiio.cs.o.eq(~spi_cs),
                          spiio.sclk.o.eq(spi_sclk)]
 
-        @def_method(m, self.set, nonexclusive=True)
+        @def_method(m, self.set, combiner=oring_combiner, nonexclusive=True)
         def _(arg):
             assign_xvalue(m, spi_sclk_edges)
             assign_xvalue(m, div_cycle)

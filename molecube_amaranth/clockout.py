@@ -4,7 +4,7 @@ from amaranth import *
 
 from transactron import TModule, Transaction, Method, def_method
 
-from .utils import assign_xvalue
+from .utils import assign_xvalue, oring_combiner
 
 class ClockOutController(Elaboratable):
     def __init__(self, clockoutio, *, div_width=8):
@@ -35,13 +35,7 @@ class ClockOutController(Elaboratable):
         # reset while running the sequence,
         # this can be supported by simplying or-ing the input to make sure
         # the divider is OFF.
-        def combiner(m, args, runs):
-            div = C(0, 8)
-            for i, v in enumerate(args):
-                div = div | Mux(runs[i], v.div, 0)
-            return {"div": div}
-
-        @def_method(m, self.set, combiner=combiner, nonexclusive=True)
+        @def_method(m, self.set, combiner=oring_combiner, nonexclusive=True)
         def _(div):
             m.d.sync += [divider.eq(div),
                          counter.eq(div),

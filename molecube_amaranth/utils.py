@@ -61,3 +61,11 @@ def assign_xvalue(m, s, *, domain='sync'):
     gen = _XValueGenerator(Signal.like(s))
     m.submodules += gen
     m.d[domain] += s.eq(gen.value)
+
+def oring_combiner(m, args, runs):
+    arg0 = args[0]
+    shape = arg0.shape()
+    res = C(0, len(Value.cast(arg0)))
+    for i, v in enumerate(args):
+        res = res | Mux(runs[i], Value.cast(v), 0)
+    return View(shape, res)
