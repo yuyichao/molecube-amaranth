@@ -12,6 +12,7 @@ dependencies = [
     "transactron ~= 0.6.1",
     "amaranth-axi @ git+https://github.com/yuyichao/amaranth-axi",
     "amaranth-zynq @ git+https://github.com/yuyichao/amaranth-zynq",
+    "xilinx_ps_config @ git+https://github.com/yuyichao/xilinx_ps_config",
 ]
 requires-python = ">=3.6"
 classifiers = [
