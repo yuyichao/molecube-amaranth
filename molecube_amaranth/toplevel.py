@@ -7,12 +7,11 @@ from amaranth.lib.cdc import ResetSynchronizer
 from amaranth_zynq.ps7 import PsZynq
 from amaranth_axi import AXI32AXI, AXI2AXILite, AXILiteXBar
 
-from molecube_amaranth.config import Config
 from molecube_amaranth.csr import Registers
 from molecube_amaranth.fifo import Fifos
 from molecube_amaranth.inst_runner import InstRunner
 from molecube_amaranth.interface import ControlInterface
-from molecube_amaranth.io import PulseIO, sma_pin
+from molecube_amaranth.io import PulseIO
 
 class TopLevel(Elaboratable):
     def __init__(self, config):
