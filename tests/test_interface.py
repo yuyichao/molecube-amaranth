@@ -26,10 +26,11 @@ def update_data(old_data, data, strb):
     return data
 
 class InterfaceWrapper(Elaboratable):
-    def __init__(self):
+    def __init__(self, *, addr_prefix=0, addr_width=9):
         self.csr = Registers()
         self.fifos = Fifos(32)
-        self.iface = ControlInterface(10, self.csr, self.fifos)
+        self.iface = ControlInterface(addr_width, self.csr, self.fifos,
+                                      prefix=addr_prefix, valid_width=9)
 
         self.reader = AXILMasterReadIFace(self.iface.axilite)
         self.writer = AXILMasterWriteIFace(self.iface.axilite)
@@ -139,8 +140,9 @@ class InterfaceWrapper(Elaboratable):
         return m
 
 class TestInterface(TestCaseWithSimulator):
-    def test_idle(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_idle(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
         async def f(sim):
             for _ in range(100):
                 assert sim.get(iface.csr.ttl_hi_mask) == 0
@@ -177,8 +179,9 @@ class TestInterface(TestCaseWithSimulator):
         with self.run_simulation(iface) as sim:
             sim.add_testbench(f)
 
-    def test_read(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_read(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
 
         async def f(sim):
             for _ in range(10):
@@ -195,8 +198,9 @@ class TestInterface(TestCaseWithSimulator):
         with self.run_simulation(iface) as sim:
             sim.add_testbench(f)
 
-    def test_read_throughput(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_read_throughput(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
 
         ncycles = 1000
         vals = {}
@@ -224,8 +228,9 @@ class TestInterface(TestCaseWithSimulator):
             sim.add_testbench(producer)
             sim.add_testbench(consumer)
 
-    def test_write(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_write(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
         masks = {}
         vals = {}
         for idx, reg in iface.read_write_regs.items():
@@ -256,8 +261,9 @@ class TestInterface(TestCaseWithSimulator):
         with self.run_simulation(iface) as sim:
             sim.add_testbench(f)
 
-    def test_write_throughput(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_write_throughput(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
         masks = {}
         vals = {}
         for idx, reg in iface.read_write_regs.items():
@@ -295,8 +301,9 @@ class TestInterface(TestCaseWithSimulator):
             sim.add_testbench(producer)
             sim.add_testbench(consumer)
 
-    def test_write_command(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_write_command(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
         written = []
         start_reading = False
 
@@ -344,8 +351,9 @@ class TestInterface(TestCaseWithSimulator):
             sim.add_testbench(receiver)
             sim.add_testbench(consumer)
 
-    def test_result(self):
-        iface = InterfaceWrapper()
+    @pytest.mark.parametrize("addr_width", [9, 20])
+    def test_result(self, addr_width):
+        iface = InterfaceWrapper(addr_width=addr_width)
 
         async def f(sim):
             n1 = 10
@@ -377,6 +385,48 @@ class TestInterface(TestCaseWithSimulator):
 
             assert sim.get(iface.csr.dbg_result_generated.value) == n2
             assert sim.get(iface.csr.dbg_result_consumed.value) == n1 + n2
+
+        with self.run_simulation(iface) as sim:
+            sim.add_testbench(f)
+
+    @pytest.mark.parametrize("prefix", [0, 0x23_0000])
+    def test_error(self, prefix):
+        iface = InterfaceWrapper(addr_width=32, addr_prefix=prefix)
+
+        async def f(sim):
+            valid_mask = (1 << 9) - 1
+            for _ in range(10):
+                while True:
+                    addr = random.randint(0, valid_mask)
+                    if addr != 0x1f:
+                        break
+                addr |= prefix
+                assert (await iface.read_request.call_try(sim, addr=addr)) is not None
+                for _ in range(25):
+                    await sim.tick()
+                assert (await iface.read_reply.call_try(sim)).resp == 0
+
+                assert (await iface.write_request.call_try(sim, addr=addr,
+                                                           strb=0, data=0)) is not None
+                for _ in range(3):
+                    await sim.tick()
+                assert (await iface.write_reply.call_try(sim)).resp == 0
+
+            for _ in range(100):
+                while True:
+                    addr = random.randint(0, 0xffff_ffff)
+                    if (addr >> 9) != (prefix >> 9):
+                        break
+                assert (await iface.read_request.call_try(sim, addr=addr)) is not None
+                for _ in range(25):
+                    await sim.tick()
+                assert (await iface.read_reply.call_try(sim)).resp == 3
+
+                assert (await iface.write_request.call_try(sim, addr=addr,
+                                                           strb=0, data=0)) is not None
+                for _ in range(3):
+                    await sim.tick()
+                assert (await iface.write_reply.call_try(sim)).resp == 3
 
         with self.run_simulation(iface) as sim:
             sim.add_testbench(f)

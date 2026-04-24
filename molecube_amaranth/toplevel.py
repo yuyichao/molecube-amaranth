@@ -5,7 +5,7 @@ from amaranth.lib import wiring
 from amaranth.lib.wiring import In, Out
 from amaranth.lib.cdc import ResetSynchronizer
 from amaranth_zynq.ps7 import PsZynq
-from amaranth_axi import AXI32AXI, AXI2AXILite, AXILiteXBar
+from amaranth_axi import AXI32AXI, AXI2AXILite
 
 from molecube_amaranth.csr import Registers
 from molecube_amaranth.fifo import Fifos
@@ -23,7 +23,9 @@ class TopLevel(Elaboratable):
         m.submodules.ps = ps = PsZynq()
         m.submodules.regs = regs = Registers()
         m.submodules.fifos = fifos = Fifos(32)
-        m.submodules.controller = controller = ControlInterface(9, regs, fifos)
+        m.submodules.controller = controller = ControlInterface(32, regs, fifos,
+                                                                prefix=0x7300_0000,
+                                                                valid_width=9)
 
         m.submodules.pulseio = pulseio = PulseIO.from_config(plat, self.config)
         m.submodules.inst_runner = inst_runner = InstRunner(
@@ -42,12 +44,6 @@ class TopLevel(Elaboratable):
                                                        addr_width=32,
                                                        id_width=12)
         wiring.connect(m, axi_master, axi2axil.axi)
-
-        xbar = AXILiteXBar(data_width=32, addr_width=32)
-        m.submodules.xbar = xbar
-        xbar.add_master(axi2axil.axilite)
-
-        xbar.add_slave(controller.axilite.cast(m, addr_width=32),
-                       0x7300_0000, 0x200)
+        wiring.connect(m, axi2axil.axilite, controller.axilite)
 
         return m

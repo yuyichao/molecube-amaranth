@@ -18,10 +18,14 @@ from .utils import xvalue
 
 class ControlInterface(wiring.Component):
     DATA_WIDTH = 32
-    def __init__(self, addr_width, csr_regs, fifos):
+    def __init__(self, addr_width, csr_regs, fifos, prefix=0, valid_width=None):
         self.addr_width = addr_width
         self.csr_regs = csr_regs
         self.fifos = fifos
+        if valid_width is None:
+            valid_width = addr_width
+        self.prefix = prefix >> valid_width
+        self.valid_width = valid_width
         super().__init__({
             'axilite': In(AXI4Lite(self.DATA_WIDTH, addr_width)),
         })
@@ -88,6 +92,13 @@ class ControlInterface(wiring.Component):
         start_write = write_pipe.create_external(i=[('idx', self.addr_width - 2),
                                                     ('data', 32), ('strb', 4)], o=[])
 
+        if self.valid_width != self.addr_width:
+            @write_pipe.stage(m, o=[('idx', self.valid_width - 2)])
+            def _(idx):
+                idx_prefix = idx >> (self.valid_width - 2)
+                write_iface.done(m, Mux(idx_prefix == self.prefix, 0, 3))
+                return dict(idx=idx[:self.valid_width - 2])
+
         @write_pipe.stage(m)
         def _(idx, data):
             with m.If(idx == 0x1f):
@@ -146,16 +157,19 @@ class ControlInterface(wiring.Component):
 
         with Transaction().body(m):
             req = write_iface.get(m)
-            start_write(m, idx=req.addr >> 2, data=req.data, strb=req.strb)
-            write_iface.done(m)
+            addr = req.addr
+            start_write(m, idx=addr >> 2, data=req.data, strb=req.strb)
+            if self.valid_width == self.addr_width:
+                write_iface.done(m)
 
         m.submodules.read_pipe = read_pipe = PipelineBuilder()
 
         start_read = read_pipe.create_external(i=[('idx', self.addr_width - 2)], o=[])
 
-        @read_pipe.stage(m)
-        def _():
-            pass
+        @read_pipe.stage(m, o=[('idx', self.valid_width - 2), ('resp', 2)])
+        def _(idx):
+            return dict(idx=idx[:self.valid_width - 2],
+                        resp=Mux((idx >> (self.valid_width - 2)) == self.prefix, 0, 3))
 
         @read_pipe.stage(m, o=[('data', self.DATA_WIDTH)])
         def _(idx):
@@ -261,8 +275,8 @@ class ControlInterface(wiring.Component):
             pass
 
         @read_pipe.stage(m)
-        def _(data):
-            read_iface.done(m, data)
+        def _(data, resp):
+            read_iface.done(m, data, resp=resp)
 
         with Transaction().body(m):
             req = read_iface.get(m)
